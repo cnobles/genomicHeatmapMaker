@@ -1,19 +1,20 @@
 source("utils.R")
 
-library(colorspace)
-library(hiAnnotator)
-library(pipeUtils)
-library(intSiteRetriever)
-library(GCcontent)
-library(BSgenome)
-library(BSgenome.Hsapiens.UCSC.hg18)
-library(BSgenome.Hsapiens.UCSC.hg19)
+libs <- c("plyr",
+          "dplyr",
+          "RMySQL",
+          "colorspace",
+          "hiAnnotator",
+          "pipeUtils",
+          "intSiteRetriever",
+          "GCcontent")
+null <- suppressMessages(sapply(libs, library, character.only=TRUE))
 
 make_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, connection) {
     if ( ! "label" %in% colnames(sampleName_GTSP)) {
         sampleName_GTSP$label <- sampleName_GTSP$GTSP
     }
-    sampleName_GTSP <- select(sampleName_GTSP, sampleName, GTSP, label)
+    sampleName_GTSP <- dplyr::select(sampleName_GTSP, sampleName, GTSP, label)
 
     # should have at least two samples
     stopifnot(length(unique(sampleName_GTSP$GTSP)) != 1)
@@ -21,7 +22,17 @@ make_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, connectio
     sampleName_GTSP$refGenome <- rep(referenceGenome, nrow(sampleName_GTSP))
 
     # check that all samples processed with the same reference genome
-    stopifnot(all(setNameExists(sampleName_GTSP, connection)))
+    ##stopifnot(all(setNameExists(sampleName_GTSP, connection)))
+    if( !all(setNameExists(sampleName_GTSP, connection)) ) {
+        sampleNameIn <- paste(sprintf("'%s'", sampleName_GTSP$sampleName),
+                              collapse=",")
+        q <- sprintf("SELECT * FROM samples WHERE sampleName IN (%s)",
+                     sampleNameIn)
+        message("\nChecking database:\n",q,"\n")
+        write.table(tbl(dbConn, sql(q)), quote=FALSE, row.name=FALSE)
+        message()
+        stop("Was --ref_genome specified correctly or did query return all entries")
+    }
 
     reference_genome_sequence <- get_reference_genome(referenceGenome)
     sites_mrcs <- get_integration_sites_with_mrcs(
@@ -30,9 +41,17 @@ make_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, connectio
     # TODO: populate from local database, at present pulled from UCSC web-site
     refSeq_genes <- getRefSeq_genes(referenceGenome)
     CpG_islands <- getCpG_islands(referenceGenome)
-    DNaseI <- getDNaseI(referenceGenome)
-
-    oncogene_file <- "allonco_no_pipes.csv"
+    ## DNaseI <- getDNaseI(referenceGenome)
+    if(grepl("^hg1", referenceGenome)) DNaseI <- getDNaseI(referenceGenome)
+    ##if(grepl("^mm", referenceGenome)) DNaseI <- getDNaseI("hg18")
+    
+    ## note mouse doesn't have this table
+    
+    
+    oncogene_file <- ifelse(grepl("^hg1", referenceGenome),
+                            "allonco_no_pipes.csv",
+                            "allonco_no_pipes.mm.csv")
+    
     # @return vector of gene symbols
     get_oncogene_from_file <- function(filename) {
         onco <- read.csv(filename, header=FALSE, stringsAsFactors=FALSE)
@@ -56,6 +75,7 @@ make_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, connectio
     sites_mrcs <- getNearestFeature(
       sites_mrcs, refSeq_oncogene, dists.only=TRUE, colnam="onco")
     #sites_mrcs, refSeq_oncogene, dists.only=TRUE, colnam="onco.100k")
+    sites_mrcs$oncoDist[is.na(sites_mrcs$oncoDist)] <- 10000000
     sites_mrcs$onco.100k <- abs(sites_mrcs$oncoDist) <= 50000
     sites_mrcs$oncoDist <- NULL
     # end oncogene
@@ -88,9 +108,12 @@ make_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, connectio
     sites_mrcs <- from_counts_to_density(sites_mrcs, 
                                          "CpG_density", window_size_CpG_density)
 
-    window_size_DNaseI <- c("1k"=1e3, "10k"=1e4, "100k"=1e5, "1M"=1e6)
-    sites_mrcs <- getFeatureCounts(sites_mrcs, DNaseI, "DNaseI_count", 
-                                   width=window_size_DNaseI)
+    if( grepl("^hg1", referenceGenome) ) {
+    ##if( TRUE ) {
+        window_size_DNaseI <- c("1k"=1e3, "10k"=1e4, "100k"=1e5, "1M"=1e6)
+        sites_mrcs <- getFeatureCounts(sites_mrcs, DNaseI, "DNaseI_count", 
+                                       width=window_size_DNaseI)
+    }
 
     sites_mrcs <- as.data.frame(sites_mrcs)
 
@@ -101,8 +124,8 @@ make_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, connectio
     #sites_mrcs$sampleName <- factor(sites_mrcs$sampleName, levels=names(sampleNameInput))
 
     rset <- with(sites_mrcs, ROC.setup(
-      rep(TRUE, nrow(sites_mrcs)), type, siteID, sampleName))
+        rep(TRUE, nrow(sites_mrcs)), type, siteID, sampleName))
     roc.res <- ROC.strata(annotation_columns, rset, add.var=TRUE, sites_mrcs)
-    ROCSVG(roc.res, heat_map_result_dir)
+    ROCSVG(roc.res, output_dir)
 
 }
