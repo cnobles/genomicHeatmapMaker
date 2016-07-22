@@ -14,6 +14,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+library(hotROCs)
 
 getRefSeq_genes <- function(reference_genome) {
   refSeq <- makeGRanges(
@@ -199,14 +200,76 @@ is_enough_sites <- function(sampleName_GTSP, connection) {
      FALSE 
 }
 
-#' create a folder
+#' create a folder containing the SVG outputs and p-value calculations for the (clasically matched) random controls used in ROC calculations
 #'
 #' @param sites_mrcs Granges with sites, controls and features
-sites_to_ROC <- function(sites_mrcs, output_dir) {
+sites_to_ROC_old <- function(sites_mrcs, output_dir) {
     sites_mrcs <- as.data.frame(sites_mrcs)
     annotation_columns <- get_annotation_columns(sites_mrcs)
     rset <- with(sites_mrcs, ROC.setup(
       rep(TRUE, nrow(sites_mrcs)), type, siteID, sampleName))
     roc.res <- ROC.strata(annotation_columns, rset, add.var=TRUE, sites_mrcs)
     ROCSVG(roc.res, output_dir)
+}
+
+##' Substitute Median for \code{NA}
+##'
+##' When there is little mising data, a rough-and-ready fill-in method
+##' may be preferred to computationally intensive method of handling
+##' missingness.  For non-parametric ROC curves based on ranks of the
+##' data, using the median (of the non-missing data) as the fill-in is
+##' a fairly innocuous choice.  If there is much missing data, this
+##' method is not advised as it tends to bias the ROC curve area
+##' towards 0.5.
+##' @title na.median
+##' @param x \code{matrix} or \code{data.frame} possibly containing
+##'     \code{NA} values.
+##' @return An object like \code{x}, but with the medians of the
+##'     columns used in place of the \code{NA} values in the
+##'     corresponding columns.
+##' @author Charles Berry
+na.median <-
+  function(x)
+  {
+    if (!is.matrix(x)) x <- as.matrix(x)
+    na.count <- colSums(is.na(x))
+    if (any(na.count != 0 ))
+    {
+      for (i in 1:ncol(x))
+        if (na.count[i]>0){
+          med <- median(x[,i],na.rm=TRUE)
+          x[is.na(x[,i]),i] <- med
+        }
+    }
+    x
+  }
+
+# ROC calculation for Matched Random Controls 
+# This is similar to the way we did this classically for restriction sites.
+sites_to_ROC_matched <- function(sites_mrcs, output_dir) {
+  sites_mrcs <- as.data.frame(sites_mrcs)
+  annotation_columns <- get_annotation_columns(sites_mrcs)
+    roc.res <- ROC.MRC(
+    sites_mrcs[,"type"],
+    sites_mrcs[,"siteID"],
+    na.median(sites_mrcs[,annotation_columns]),
+    sites_mrcs[,"sampleName"])
+  ROCSVG(roc.res, output_dir)
+}
+#res3 <- ROC.ORC(response,na.median(variables),origin,origin.levels)
+
+
+# ROC calculation for Ordinary (unmatched) Random Controls
+# Provides the corrected version for unmatched controls.
+# This should roughly match. p-values will differ but should not be
+# qualitatively different.
+
+sites_to_ROC_ordinary <- function(sites_mrcs, output_dir) {
+  sites_mrcs <- as.data.frame(sites_mrcs)
+  annotation_columns <- get_annotation_columns(sites_mrcs)
+  roc.res <- ROC.ORC(
+    sites_mrcs[,"type"],
+    sites_mrcs[,annotation_columns],
+    sites_mrcs[,"sampleName"])
+  ROCSVG(roc.res, output_dir)
 }
