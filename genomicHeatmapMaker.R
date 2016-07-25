@@ -17,7 +17,6 @@
 
 library(colorspace)
 library(hiAnnotator)
-library(pipeUtils)
 library(intSiteRetriever)
 library(GCcontent)
 library(BSgenome)
@@ -113,5 +112,5 @@ sites_to_heatmap <- function(sites_mrcs, referenceGenome, output_dir) {
         sites_mrcs <- getFeatureCounts(sites_mrcs, DNaseI, "DNaseI_count", 
                                        width=window_size_DNaseI)
     }
-    sites_to_ROC(sites_mrcs, output_dir)
+    sites_to_ROC_ordinary(sites_mrcs, output_dir)
 }
