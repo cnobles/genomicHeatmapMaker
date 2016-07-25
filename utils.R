@@ -14,6 +14,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+
 library(hotROCs)
 
 getRefSeq_genes <- function(reference_genome) {
@@ -256,7 +257,6 @@ sites_to_ROC_matched <- function(sites_mrcs, output_dir) {
     sites_mrcs[,"sampleName"])
   ROCSVG(roc.res, output_dir)
 }
-#res3 <- ROC.ORC(response,na.median(variables),origin,origin.levels)
 
 
 # ROC calculation for Ordinary (unmatched) Random Controls
@@ -266,10 +266,17 @@ sites_to_ROC_matched <- function(sites_mrcs, output_dir) {
 
 sites_to_ROC_ordinary <- function(sites_mrcs, output_dir) {
   sites_mrcs <- as.data.frame(sites_mrcs)
+
   annotation_columns <- get_annotation_columns(sites_mrcs)
+
+  #i <- sites_mrcs[c("type", annotation_columns, "sampleName")] 
+  #message('sites_mrcs data frame:')
+  #write.table(i)
+
   roc.res <- ROC.ORC(
     sites_mrcs[,"type"],
-    sites_mrcs[,annotation_columns],
+#   sites_mrcs[,annotation_columns],
+    na.median(sites_mrcs[,annotation_columns]),
     sites_mrcs[,"sampleName"])
   ROCSVG(roc.res, output_dir)
 }

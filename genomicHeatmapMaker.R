@@ -23,6 +23,8 @@ library(BSgenome)
 library(BSgenome.Hsapiens.UCSC.hg18)
 library(BSgenome.Mmusculus.UCSC.mm9)
 
+#library(pipeUtils)
+
 codeDir <- dirname(sub("--file=", "", grep("--file=", commandArgs(trailingOnly=FALSE), value=T)))
 
 make_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, connection) {
@@ -112,5 +114,7 @@ sites_to_heatmap <- function(sites_mrcs, referenceGenome, output_dir) {
         sites_mrcs <- getFeatureCounts(sites_mrcs, DNaseI, "DNaseI_count", 
                                        width=window_size_DNaseI)
     }
+    
     sites_to_ROC_ordinary(sites_mrcs, output_dir)
+    #sites_to_ROC_old(sites_mrcs, output_dir)
 }
