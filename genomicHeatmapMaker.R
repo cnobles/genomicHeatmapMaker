@@ -115,6 +115,12 @@ sites_to_heatmap <- function(sites_mrcs, referenceGenome, output_dir) {
                                        width=window_size_DNaseI)
     }
     
-    sites_to_ROC_ordinary(sites_mrcs, output_dir)
-    #sites_to_ROC_old(sites_mrcs, output_dir)
+    if (config$rocControls == 'unmatched')
+    {
+       sites_to_ROC_ordinary(sites_mrcs, output_dir)
+    } else if (config$rocControls == 'matched') {
+       sites_to_ROC_matched(sites_mrcs, output_dir)
+    } else {
+       stop('Error, rocControls is not properly defined in the configuration file.') 
+    }
 }

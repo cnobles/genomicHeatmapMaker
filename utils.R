@@ -267,6 +267,8 @@ sites_to_ROC_matched <- function(sites_mrcs, output_dir) {
 sites_to_ROC_ordinary <- function(sites_mrcs, output_dir) {
   sites_mrcs <- as.data.frame(sites_mrcs)
 
+  write.table(sites_mrcs, file='sites_mrcs.gen')
+
   annotation_columns <- get_annotation_columns(sites_mrcs)
 
   #i <- sites_mrcs[c("type", annotation_columns, "sampleName")] 
