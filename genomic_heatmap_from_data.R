@@ -25,6 +25,7 @@ invisible(sapply(libs, library, character.only=TRUE))
 
 parser <- ArgumentParser(description="Make genomic heatmap for sites from database")
 parser$add_argument("sample_gtsp", nargs='?', default='sampleName_GTSP.csv')
+parser$add_argument("sample_data", nargs='?', default='specimen_data.csv')
 parser$add_argument("-c", default="./INSPIIRED.yml", help="path to INSPIIRED configuration file.")
 parser$add_argument("-o", "--output_dir", type="character", default="heatmap_output",
     help="output folder where genomic heat maps files will be saved")
@@ -40,9 +41,9 @@ args
 if (!file.exists(args$c)) stop("the configuration file can not be found.")
 config <<- yaml.load_file(args$c)
 
-
 referenceGenome <- args$ref_genome
 heat_map_result_dir <- args$output_dir 
+sample_data <- args$sample_data
 
 loaded_ref_genomes <- c ("hg18", "mm9")
 if ( ! referenceGenome %in% loaded_ref_genomes) {
@@ -61,19 +62,19 @@ message("\nGenerating report from the following sets")
 print(sampleName_GTSP)
 
 # Connect to the database
-if (config$dataBase == 'mysql'){
-   stopifnot(file.exists("~/.my.cnf"))
-   stopifnot(file.info("~/.my.cnf")$mode == as.octmode("600"))
-   dbConn <- dbConnect(MySQL(), group=config$mysqlConnectionGroup)
-   info <- dbGetInfo(dbConn)
-   connection <- src_sql("mysql", dbConn, info = info)
-}else if (config$dataBase == 'sqlite') {
-   dbConn <- dbConnect(RSQLite::SQLite(), dbname=config$sqliteIntSitesDB)
-   info <- dbGetInfo(dbConn)
-   connection <- src_sql("sqlite", dbConn, info = info)
-   dbConn2 <- dbConnect(RSQLite::SQLite(), dbname=config$sqliteSampleManagement)
-   info2 <- dbGetInfo(dbConn2)
-   connection2 <- src_sql("sqlite", dbConn2, info = info2)
-} else { stop('Can not establish a connection to the database') }
+#if (config$dataBase == 'mysql'){
+#   stopifnot(file.exists("~/.my.cnf"))
+#   stopifnot(file.info("~/.my.cnf")$mode == as.octmode("600"))
+#   dbConn <- dbConnect(MySQL(), group=config$mysqlConnectionGroup)
+#   info <- dbGetInfo(dbConn)
+#   connection <- src_sql("mysql", dbConn, info = info)
+#}else if (config$dataBase == 'sqlite') {
+#   dbConn <- dbConnect(RSQLite::SQLite(), dbname=config$sqliteIntSitesDB)
+#   info <- dbGetInfo(dbConn)
+#   connection <- src_sql("sqlite", dbConn, info = info)
+#   dbConn2 <- dbConnect(RSQLite::SQLite(), dbname=config$sqliteSampleManagement)
+#   info2 <- dbGetInfo(dbConn2)
+#   connection2 <- src_sql("sqlite", dbConn2, info = info2)
+#} else { stop('Can not establish a connection to the database') }
 
-make_heatmap(sampleName_GTSP, referenceGenome, heat_map_result_dir, connection)
+make_heatmap_from_data(sampleName_GTSP, referenceGenome, heat_map_result_dir, sample_data)
