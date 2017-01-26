@@ -26,6 +26,7 @@ invisible(sapply(libs, library, character.only=TRUE))
 parser <- ArgumentParser(description="Make genomic heatmap for sites from database")
 parser$add_argument("sample_gtsp", nargs='?', default='sampleName_GTSP.csv')
 parser$add_argument("sample_data", nargs='?', default='specimen_data.csv')
+parser$add_argument("-c", default="./INSPIIRED.yml", help="path to INSPIIRED configuration file.")
 parser$add_argument("-o", "--output_dir", type="character", default="heatmap_output",
     help="output folder where genomic heat maps files will be saved")
 parser$add_argument("-r", "--ref_genome", type="character", default="hg18", 
