@@ -38,6 +38,11 @@ referenceGenome <- args$ref_genome
 heat_map_result_dir <- args$output_dir 
 sample_data <- args$sample_data
 
+# Load configuration file
+if (!file.exists(args$c)) stop("the configuration file can not be found.")
+config <<- yaml.load_file(args$c)
+
+
 loaded_ref_genomes <- c ("hg18", "mm9")
 if ( ! referenceGenome %in% loaded_ref_genomes) {
     message("Only following genomes are loaded:")
